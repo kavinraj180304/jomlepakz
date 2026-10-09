@@ -4,11 +4,12 @@ JomLepakz helps Universiti Malaya (UM) students find people to do activities wit
 
 ## Current development status
 
-The Next.js application foundation is scaffolded. Product features have not been implemented yet. The repository retains the V1 scope, development checklist, and Base44 screenshot handover. The planned initial beta is for 10-20 UM students.
+The Next.js application includes visual-only demo screens backed by typed fictional data. Database, authentication, real messaging, joining, publishing, and admin operations are not connected. The repository retains the V1 scope, development checklist, and Base44 screenshot handover. The planned initial beta is for 10-20 UM students.
 
 - [Project scope](docs/scope.md)
 - [Development progress](docs/progress.md)
 - [Visual handover](docs/base44-handover.md)
+- [Demo screen routes and checks](docs/demo-screens.md)
 - [Reference screenshots](references/base44/)
 
 ## Main stack

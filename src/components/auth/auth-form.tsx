@@ -1,0 +1,13 @@
+"use client";
+import Link from "next/link";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { DemoBanner, Field } from "@/components/ui/screen";
+
+type AuthMode = "sign-in" | "sign-up" | "password-reset";
+export function AuthForm({ mode }: { mode: AuthMode }) {
+  const [notice, setNotice] = useState("");
+  const title = mode === "sign-in" ? "Welcome back" : mode === "sign-up" ? "Find your people at UM" : "Reset your password";
+  return <main id="main-content" className="flex min-h-dvh flex-col justify-center space-y-6 p-6"><Link href="/" className="text-xl font-extrabold tracking-tight">JomLepakz</Link><div><h1 className="page-title">{title}</h1><p className="helper-text mt-2">{mode === "password-reset" ? "Enter an illustrative email to preview the reset form." : "Meet students through activities you enjoy."}</p></div><DemoBanner>Visual demo only. Use fictional values, not real credentials. Nothing is submitted to an authentication service.</DemoBanner><form className="space-y-5" onSubmit={event => { event.preventDefault(); setNotice(mode === "password-reset" ? "Reset UI preview only. No email was sent." : mode === "sign-up" ? "Sign-up UI preview only. No account was created." : "Sign-in UI preview only. You are not signed in."); }} onChange={() => setNotice("")}>{mode === "sign-up" && <Field label="Full Name" htmlFor="auth-name"><Input id="auth-name" required maxLength={100} placeholder="Demo Student" autoComplete="off" /></Field>}<Field label="Student email" htmlFor="auth-email"><Input id="auth-email" type="email" required placeholder="student@example.com" autoComplete="off" /></Field>{mode !== "password-reset" && <Field label="Password" htmlFor="auth-password"><Input id="auth-password" type="password" required minLength={8} autoComplete="new-password" placeholder="Fictional demo password" /></Field>}{mode === "sign-in" && <Link href="/password-reset" className="block text-right text-sm text-primary">Forgot password?</Link>}{notice && <p role="status" className="rounded-lg bg-accent p-3 text-sm">{notice}</p>}<Button type="submit" size="lg" className="w-full">{mode === "sign-in" ? "Preview sign in" : mode === "sign-up" ? "Preview sign up" : "Preview password reset"}</Button></form><div className="space-y-3 text-center text-sm">{mode === "sign-in" ? <p>New to JomLepakz? <Link href="/sign-up" className="font-semibold text-primary">Sign up</Link></p> : <Link href="/sign-in" className="text-primary">Back to sign in</Link>}<Link href="/" className="block text-muted-foreground underline">Explore the demo</Link></div></main>;
+}

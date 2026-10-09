@@ -33,7 +33,7 @@ export function DiscoverScreen() {
         <DiscoveryFilterControl value={filters} onChange={setFilters} />
       </div>
       <div className="horizontal-scroll flex gap-2 overflow-x-auto" aria-label="Activity dates">
-        {dateFilters.map(day => <button type="button" key={day} aria-pressed={date === day} onClick={() => setDate(day)} className={cn("h-10 shrink-0 rounded-full px-5 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-ring", date === day ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{day}</button>)}
+        {dateFilters.map(day => <button type="button" key={day} aria-pressed={date === day} onClick={() => setDate(day)} className={cn("h-11 shrink-0 rounded-full px-5 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-ring", date === day ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{day}</button>)}
       </div>
       <CategoryChips value={category} onChange={setCategory} />
       <p className="text-xs text-muted-foreground">Static demo · Illustrative activities and dates</p>

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AppHeader } from "@/components/navigation/app-header";
-import { BottomNavigation } from "@/components/navigation/bottom-navigation";
+import { AppChrome } from "@/components/navigation/app-chrome";
+import { LoadingState } from "@/components/ui/screen-states";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,11 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <a href="#main-content" className="sr-only focus:not-sr-only focus:p-3 focus:text-primary">Skip to content</a>
-        <div className="mx-auto min-h-dvh w-full max-w-lg pb-28">
-          <AppHeader />
-          <Suspense fallback={<main id="main-content" className="p-4 text-muted-foreground">Loading activity…</main>}>{children}</Suspense>
-          <Suspense fallback={null}><BottomNavigation /></Suspense>
-        </div>
+        <Suspense fallback={<main id="main-content" className="mx-auto w-full max-w-lg"><LoadingState /></main>}><AppChrome>{children}</AppChrome></Suspense>
       </body>
     </html>
   );

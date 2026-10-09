@@ -8,7 +8,7 @@ The generated project uses Next.js 16.4 App Router, React 19.3, TypeScript, Tail
 
 `next.config.ts` currently enables Cache Components and Partial Prefetching and configures the Tailwind Turbopack loader. `@/` imports point to `src/`, as defined in `tsconfig.json`.
 
-Shared Button and Input components live in `src/components/ui/`, the ActivityCard lives in `src/components/activities/`, navigation lives in `src/components/navigation/`, and Discover controls live in `src/components/discovery/`. Search and filters operate only on demo data in browser memory. Other navigation destinations show a demo-only notice. See [the design system](design-system.md). There are no database clients, migrations, Server Actions, or API routes yet.
+Shared Button, Input, screen headers, form fields, and status states live in `src/components/ui/`. Feature components live under `activities/`, `discovery/`, `profile/`, `auth/`, `notifications/`, `messages/`, and `admin/`; navigation lives in `src/components/navigation/`. Thin route files compose these components. Typed fixtures live in `src/lib/demo/`. See [the design system](design-system.md) and [visual screen guide](demo-screens.md). There are no database clients, migrations, Server Actions, or API routes yet.
 
 ## Minimal intended structure
 

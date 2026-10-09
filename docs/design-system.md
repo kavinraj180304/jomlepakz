@@ -33,7 +33,7 @@ Mobile is the baseline. The preview uses 24px horizontal padding at 640px and tw
 - `src/components/ui/input.tsx`: shadcn/ui Input for the required input styling.
 - `src/components/activities/activity-card.tsx`: a display-only shell accepting title, schedule, location, optional attendance/badges/description, and optional cover/action slots. It does not fetch data or implement saving/joining.
 - `src/lib/utils.ts`: the CLI-generated class-merging utility.
-- `src/app/page.tsx`: Discover at `/`, using typed static demo data, search, category/date controls, filters, and linked demo detail pages. Joining, saving, and the other navigation destinations are not implemented.
+- `src/app/page.tsx`: Discover at `/`, using typed static demo data, search, category/date controls, filters, and linked demo detail pages. Other destinations now have visual-only screens; see [the screen guide](demo-screens.md). Joining, saving, authentication, messaging, and admin operations remain disconnected.
 
 Configured using the current [official shadcn/ui existing-project method](https://ui.shadcn.com/docs/installation/next): `npx shadcn@latest init`, with the Base UI Nova preset, followed by adding only Button and Input. `components.json` points to `src/app/globals.css` and the existing `@/` aliases. Use `npx shadcn@latest add <component>` only when another primitive is needed; adding a preset again can overwrite custom styling.
 

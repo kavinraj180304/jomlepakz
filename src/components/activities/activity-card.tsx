@@ -36,9 +36,9 @@ export function ActivityCard({
       <div className="space-y-2 pt-4">
         <h2 className="activity-title break-words">{title}</h2>
         <p className="text-sm text-muted-foreground">{schedule}</p>
-        <p className="flex items-start gap-2 text-sm text-muted-foreground"><MapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>{location}</span></p>
+        <p className="flex items-start gap-2 text-sm text-muted-foreground"><MapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span className="min-w-0 break-words">{location}</span></p>
         {attendance && <div className="flex items-center gap-3 pt-1 text-sm text-muted-foreground">{participantInitials && <div className="flex -space-x-2" aria-hidden="true">{participantInitials.slice(0, 3).map((initial, index) => <span key={`${initial}-${index}`} className={cn("flex size-8 items-center justify-center rounded-full border-2 border-background text-xs font-bold text-white", ["bg-amber-500", "bg-blue-500", "bg-pink-500"][index])}>{initial}</span>)}</div>}<p className="flex items-center gap-1.5"><Users className="size-4 shrink-0" aria-hidden="true" /><span>{attendance}</span></p></div>}
-        {description && <p className="pt-3 text-sm">{description}</p>}
+        {description && <p className="break-words pt-3 text-sm">{description}</p>}
       </div>
     </article>
   );
