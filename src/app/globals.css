@@ -1,26 +1,65 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+/* Light theme derived from the Base44 screenshots. */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #475569;
+  --muted: #f8fafc;
+  --muted-foreground: #64748b;
+  --accent: #eff6ff;
+  --accent-foreground: #2563eb;
+  --border: #dce5f0;
+  --input: #dce5f0;
+  --ring: #2563eb;
+  --destructive: #b91c1c;
+  --radius: 1rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: var(--radius);
+  --radius-xl: 1.5rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background font-sans text-base leading-relaxed text-foreground; }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .horizontal-scroll { scrollbar-width: none; }
+  .horizontal-scroll::-webkit-scrollbar { display: none; }
+  .demo-dialog::backdrop { background: rgb(15 23 42 / 35%); }
+  .page-title { @apply text-2xl font-bold leading-tight tracking-tight sm:text-3xl; }
+  .section-title { @apply text-xl font-bold leading-snug; }
+  .activity-title { @apply text-xl font-bold leading-snug; }
+  .field-label { @apply text-sm font-medium text-secondary-foreground; }
+  .helper-text { @apply text-sm leading-relaxed text-muted-foreground; }
 }
