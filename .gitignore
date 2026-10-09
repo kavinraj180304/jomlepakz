@@ -13,6 +13,8 @@ dist/
 coverage/
 .vercel/
 *.tsbuildinfo
+next-env.d.ts
+*.pem
 
 # Local development files and logs
 .vscode/
