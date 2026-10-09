@@ -1,0 +1,33 @@
+﻿# Environment files and secrets; keep the names-only template tracked.
+.env*
+*.env
+*.env.*
+!.env.example
+
+# Dependencies and generated output
+node_modules/
+.next/
+out/
+build/
+dist/
+coverage/
+.vercel/
+*.tsbuildinfo
+
+# Local development files and logs
+.vscode/
+.idea/
+.cache/
+.npm/
+*.local
+*.log
+*.swp
+*.swo
+*~
+
+# Operating system junk
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
