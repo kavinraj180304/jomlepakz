@@ -40,6 +40,7 @@ WITH eligible AS (
 )
 SELECT (SELECT a FROM pair) AS a, (SELECT b FROM pair) AS b, (SELECT ap FROM pair) AS ap, (SELECT bp FROM pair) AS bp,
   (SELECT id FROM public.categories WHERE is_active ORDER BY sort_order LIMIT 1) AS category_id,
+  (SELECT slug FROM public.categories WHERE is_active ORDER BY sort_order LIMIT 1) AS category_slug,
   gen_random_uuid() AS first_id, gen_random_uuid()::text AS marker;
 GRANT SELECT ON discovery_test_context TO authenticated;
 SELECT skip('behavior tests need two existing eligible unblocked real local accounts and active category', 1)
@@ -69,6 +70,33 @@ SELECT is(public.jomlepakz_activity_details(first_id)->>'revision', NULL::text, 
 SELECT is(public.jomlepakz_activity_details(gen_random_uuid()), NULL::jsonb, 'unknown UUID returns no record')
   FROM discovery_test_context WHERE a IS NOT NULL AND category_id IS NOT NULL;
 SELECT throws_ok('SELECT public.jomlepakz_discover_activities(p_page => 0)', '22023', NULL::text, 'invalid pagination denied')
+  FROM discovery_test_context WHERE a IS NOT NULL AND category_id IS NOT NULL;
+RESET ROLE;
+
+-- Literal search and MYT date boundaries on the same rolled-back fixture.
+UPDATE public.activities SET title = t.marker || ' MixedCase', description = t.marker || ' description %_',
+  location_text = t.marker || ' location', on_campus = true,
+  starts_at = (((statement_timestamp() AT TIME ZONE 'Asia/Kuala_Lumpur')::date + 1)::timestamp AT TIME ZONE 'Asia/Kuala_Lumpur'),
+  ends_at = (((statement_timestamp() AT TIME ZONE 'Asia/Kuala_Lumpur')::date + 1)::timestamp AT TIME ZONE 'Asia/Kuala_Lumpur') + interval '1 hour'
+  FROM discovery_test_context t WHERE id = t.first_id AND t.a IS NOT NULL AND t.category_id IS NOT NULL;
+SET LOCAL ROLE authenticated;
+SELECT is(jsonb_array_length(public.jomlepakz_discover_activities(marker || ' mixedcase')->'items'), 1, 'title search is case insensitive')
+  FROM discovery_test_context WHERE a IS NOT NULL AND category_id IS NOT NULL;
+SELECT is(jsonb_array_length(public.jomlepakz_discover_activities(marker || ' description %_')->'items'), 1, 'description search treats percent and underscore literally')
+  FROM discovery_test_context WHERE a IS NOT NULL AND category_id IS NOT NULL;
+SELECT is(jsonb_array_length(public.jomlepakz_discover_activities(marker || ' location')->'items'), 1, 'location text is searchable')
+  FROM discovery_test_context WHERE a IS NOT NULL AND category_id IS NOT NULL;
+SELECT is(jsonb_array_length(public.jomlepakz_discover_activities(marker, '', 'Today')->'items'), 0, 'tomorrow MYT midnight is excluded from Today')
+  FROM discovery_test_context WHERE a IS NOT NULL AND category_id IS NOT NULL;
+SELECT is(jsonb_array_length(public.jomlepakz_discover_activities(marker, '', 'Tomorrow', true, true)->'items'), 1, 'MYT midnight matches Tomorrow with campus and availability combined')
+  FROM discovery_test_context WHERE a IS NOT NULL AND category_id IS NOT NULL;
+SELECT is(jsonb_array_length(public.jomlepakz_discover_activities(marker, category_slug, 'Tomorrow', true, true)->'items'), 1, 'category composes with search, date, availability and campus')
+  FROM discovery_test_context WHERE a IS NOT NULL AND category_id IS NOT NULL;
+SELECT is(jsonb_array_length(public.jomlepakz_discover_activities(marker, 'no-such-category')->'items'), 0, 'unknown category returns no matching rows')
+  FROM discovery_test_context WHERE a IS NOT NULL AND category_id IS NOT NULL;
+SELECT is(jsonb_array_length(public.jomlepakz_discover_activities(marker || ' mixedcase', '', 'Weekend')->'items'),
+  CASE WHEN extract(isodow FROM (statement_timestamp() AT TIME ZONE 'Asia/Kuala_Lumpur')::date + 1) IN (6, 7) THEN 1 ELSE 0 END,
+  'Weekend matches only Saturday and Sunday in Malaysia time')
   FROM discovery_test_context WHERE a IS NOT NULL AND category_id IS NOT NULL;
 RESET ROLE;
 

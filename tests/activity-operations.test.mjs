@@ -21,10 +21,11 @@ const requestId = '4d0b8b33-e1ee-4e90-90c4-d8285d2dca1f';
 const draft = { title: ' Badminton ', description: 'Bring your racket.', categorySlug: 'sports',
   date: future, time: '20:30', durationMinutes: 60, capacity: 8,
   locationChoice: 'um-sports-centre', customLocation: '', joinMode: 'approval', coverKey: 'sports' };
-function actions(client, eligible = true) {
+function actions(client, eligible = true, events = []) {
   const refreshed = [];
   const exported = load('../src/app/activities/actions.ts', {
     'next/cache': { revalidatePath: path => refreshed.push(path) },
+    '@/lib/analytics/server': { recordProductEvent: async event => events.push(event) },
     '@/lib/auth/server': { currentIdentity: async () => client ? { client, userId: 'authenticated-caller' } : null, isEligible: async () => eligible },
     '@/lib/activities/validation': validation,
   });
@@ -70,7 +71,8 @@ test('invalid or ineligible requests never reach activity RPCs', async () => {
 
 test('saving sends allowed data only, no actor ID, then refreshes real details/hosting', async () => {
   let received;
-  const api = actions({ rpc: async (name, input) => { received = { name, input }; return { data: id, error: null }; } });
+  const events = [];
+  const api = actions({ rpc: async (name, input) => { received = { name, input }; return { data: id, error: null }; } }, true, events);
   assert.deepEqual(await api.saveActivity({ draft, requestId }), { ok: true, id });
   assert.equal(received.name, 'jomlepakz_save_activity');
   assert.equal(received.input.p_activity_id, null);
@@ -81,14 +83,16 @@ test('saving sends allowed data only, no actor ID, then refreshes real details/h
   assert.ok(api.refreshed.includes('/my-activities'));
   assert.equal((await api.saveActivity({ draft, requestId, activityId: id, revision: '2' })).ok, true);
   assert.equal(received.input.p_revision, '2');
+  assert.deepEqual(events, ['activity_created'], 'Editing must not count as creation');
 });
 
 test('cross-user, conflict and unexpected errors remain friendly without Supabase detail leakage', async () => {
   for (const code of ['42501', '40001', '22023', 'P0001', 'XX000']) {
-    const api = actions({ rpc: async () => ({ data: null, error: { code, message: 'SECRET SQL DETAIL' } }) });
+    const events = [], api = actions({ rpc: async () => ({ data: null, error: { code, message: 'SECRET SQL DETAIL' } }) }, true, events);
     const result = await api.saveActivity({ draft, requestId });
     assert.equal(result.ok, false);
     assert.doesNotMatch(result.message, /SECRET|SQL/);
+    assert.deepEqual(events, []);
     if (code === '40001') assert.match(result.message, /Reload/);
   }
 });

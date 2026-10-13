@@ -142,9 +142,9 @@ The twelve tables below are the minimum proposed application schema. Supabase Au
 - **Primary key:** `(activity_id, author_id)`.
 - **Foreign keys:** `activity_id` -> `activities.id`; `author_id` -> `profiles.id`.
 - **Fields:** `body` (1-1000 trimmed characters), `created_at`. **Status:** submitted; no review workflow or public rating value.
-- **Constraints/ownership:** one private submission per author/activity after `status = completed` and `ends_at` has passed. Author must be the host or a participant whose preserved membership is `joined` at completion. This is activity feedback, not proof of physical attendance or a rating of a target student.
+- **Constraints/ownership:** one private submission per author/activity after `status = completed` and `ends_at` has passed. Author must be a non-host participant captured as `joined` at completion; hosts cannot submit participant feedback about their own activity. This is activity feedback, not proof of physical attendance or a rating of a target student.
 - **User changes:** own text on initial submission only; proposed V1 feedback is immutable. **Server/database controls:** author from authentication, eligibility, uniqueness, timestamps. No host-selected feedback visibility, score, rated user, or public aggregate.
-- **Read access:** author reads own submission; safety-authorized admins read private feedback for beta/product/safety review. Hosts cannot read other participants' feedback. Safety concerns needing action should also be filed through reports; feedback does not silently create a report.
+- **Read access:** author reads own submission. Hosts and ordinary dashboard admins cannot read other participants' feedback. A future admin review requires a separately justified scoped moderation/product policy; no general feedback-browsing capability is granted. Safety concerns needing action should also be filed through reports; feedback does not silently create a report.
 - **Indexes/deletion:** `(author_id, created_at)` for own submissions; `(created_at, activity_id)` for restricted beta review. Restrict physical activity purge until feedback retention review; author tombstone preserves relational integrity while identifying text can be anonymized. No student delete or cascade that erases safety evidence without review.
 
 ## Capacity, lifecycle, and concurrency

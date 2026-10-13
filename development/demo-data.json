@@ -1,0 +1,11 @@
+{
+  "synthetic": true,
+  "notice": "FICTIONAL DEVELOPMENT DEMO. These are not real people or meetups.",
+  "personas": { "host": "[DEMO] Hana Example", "participant": "[DEMO] Ravi Example" },
+  "activities": [
+    { "id": "d3700000-0000-4000-8000-000000000001", "title": "[DEMO] Friendly badminton", "description": "Fictional development fixture. No real meetup, reservation or attendance.", "category": "sports", "location": "UM Sports Centre", "dayOffset": 2, "capacity": 6, "joinMode": "instant", "status": "scheduled", "participantStatus": "joined" },
+    { "id": "d3700000-0000-4000-8000-000000000002", "title": "[DEMO] Study table - full", "description": "Synthetic full-activity fixture for checking capacity and empty-seat states.", "category": "study", "location": "UM Main Library", "dayOffset": 3, "capacity": 2, "joinMode": "instant", "status": "scheduled", "participantStatus": "joined" },
+    { "id": "d3700000-0000-4000-8000-000000000003", "title": "[DEMO] Lunch request", "description": "Fictional pending-request fixture. A pending request does not reserve a seat.", "category": "food", "location": "Kompleks Perdanasiswa", "dayOffset": 4, "capacity": 4, "joinMode": "approval", "status": "scheduled", "participantStatus": "pending" },
+    { "id": "d3700000-0000-4000-8000-000000000004", "title": "[DEMO] Cancelled outdoor session", "description": "Synthetic cancelled-activity fixture. This activity will not take place.", "category": "outdoor", "location": "UM Varsity Lake", "dayOffset": 5, "capacity": 4, "joinMode": "instant", "status": "cancelled", "participantStatus": "left" }
+  ]
+}

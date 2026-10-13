@@ -13,7 +13,7 @@
   --secondary: #f1f5f9;
   --secondary-foreground: #475569;
   --muted: #f8fafc;
-  --muted-foreground: #64748b;
+  --muted-foreground: #5b6b82;
   --accent: #eff6ff;
   --accent-foreground: #2563eb;
   --border: #dce5f0;
@@ -51,6 +51,12 @@
 @layer base {
   * { @apply border-border; }
   body { @apply bg-background font-sans text-base leading-relaxed text-foreground; }
+}
+
+/* Keep native controls and links visible even when a utility removes outlines. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
 }
 
 @layer components {

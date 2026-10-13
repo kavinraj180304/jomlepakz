@@ -6,7 +6,7 @@ import ts from 'typescript';
 function load(path, stubs = {}) {
   const filename = new URL(path, import.meta.url);
   const { outputText } = ts.transpileModule(readFileSync(filename, 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
   });
   const compiledModule = { exports: {} }, require = createRequire(filename);
   new Function('require', 'module', 'exports', outputText)(name => Object.hasOwn(stubs, name) ? stubs[name] : require(name), compiledModule, compiledModule.exports);
@@ -50,6 +50,85 @@ test('discovery uses the caller client and only validated filters, never an acto
   assert.deepEqual(calls, [{ name: 'jomlepakz_discover_activities', args: { p_search: '', p_category: '', p_date: 'Upcoming', p_available: true, p_on_campus: false, p_page: 2 } }]);
   await assert.rejects(api.discoverActivities({ ...filters, page: 501 }));
   assert.equal(calls.length, 1);
+});
+test('filters reject control characters, repeated values and noncanonical page numbers', () => {
+  for (const input of [{ q: 'a\0b' }, { q: 'a\nb' }, { q: ['one', 'two'] }, { category: ['sports', 'study'] },
+    { date: ['Today', 'Tomorrow'] }, { available: ['1', '0'] }, { campus: 'yes' },
+    ...['1e2', '0x10', '+2', ' 2 ', '02', '2.0', 'Infinity'].map(page => ({ page }))]) {
+    assert.equal(discovery.parseDiscoveryFilters(input).invalid, true, JSON.stringify(input));
+  }
+  assert.equal(discovery.parseDiscoveryFilters({ q: ' Lepak 咖啡 ', page: '500' }).filters.q, 'Lepak 咖啡');
+});
+test('combined filters round-trip through a shareable URL, pagination and page-one changes', () => {
+  const filters = discovery.parseDiscoveryFilters({ q: 'badminton %_ & friends', category: 'sports', date: 'Weekend', available: '1', campus: '1', page: '3' }).filters;
+  const params = Object.fromEntries(new URL(discovery.discoveryUrl(filters), 'https://example.test').searchParams);
+  assert.deepEqual(discovery.parseDiscoveryFilters(params), { filters, invalid: false });
+  const changed = discovery.changedDiscoveryFilters(filters, { date: 'Tomorrow' });
+  assert.deepEqual(changed, { ...filters, date: 'Tomorrow', page: 1 });
+  assert.deepEqual(discovery.changedDiscoveryFilters(filters, { q: ' study ' }), { ...filters, q: 'study', page: 1 });
+  assert.equal(discovery.discoveryUrl(discovery.parseDiscoveryFilters({}).filters), '/');
+});
+
+// Exercise actual component event handlers with isolated hooks; browser focus/layout
+// still need the documented manual check. No DOM test dependency is installed.
+function componentHarness(path, extra = {}) {
+  const slots = []; let cursor = 0;
+  const react = {
+    useState(initial) { const index = cursor++; if (!(index in slots)) slots[index] = initial; return [slots[index], value => { slots[index] = value; }]; },
+    useRef() { const index = cursor++; if (!(index in slots)) slots[index] = { current: { showModal() {}, close() {} } }; return slots[index]; },
+    useTransition: () => [false, callback => callback()],
+  };
+  const components = load(path, { react, ...extra });
+  return props => { cursor = 0; return Object.values(components)[0](props); };
+}
+function elements(node, predicate) {
+  if (!node || typeof node !== 'object') return [];
+  if (Array.isArray(node)) return node.flatMap(child => elements(child, predicate));
+  return [...(predicate(node) ? [node] : []), ...elements(node.props?.children, predicate)];
+}
+test('filter sheet discards dismissed edits and applies category, date and availability together', () => {
+  const applied = [], value = discovery.parseDiscoveryFilters({ category: 'sports', date: 'Today', available: '1' }).filters;
+  const render = componentHarness('../src/components/discovery/discovery-filters.tsx', {
+    '@/components/ui/button': { Button: 'button' }, '@/lib/activities/discovery': discovery,
+    '@/lib/ui/dialog-focus': load('../src/lib/ui/dialog-focus.ts'),
+  });
+  const props = { value, categories: [], disabled: false, onApply: draft => applied.push(draft) };
+  const find = predicate => elements(render(props), predicate)[0];
+  find(e => e.props?.['aria-haspopup'] === 'dialog').props.onClick();
+  find(e => e.type === 'select' && e.props.value === 'sports').props.onChange({ target: { value: 'study' } });
+  find(e => e.props?.['aria-label'] === 'Close filters').props.onClick();
+  assert.equal(applied.length, 0);
+  find(e => e.props?.['aria-haspopup'] === 'dialog').props.onClick();
+  assert.equal(elements(render(props), e => e.type === 'select')[0].props.value, 'sports');
+  find(e => e.props?.children === 'Reset filters').props.onClick();
+  find(e => e.type === 'form').props.onSubmit({ preventDefault() {} });
+  assert.deepEqual(applied, [{ category: '', date: 'Upcoming', available: '0', campus: '0' }]);
+  find(e => e.type === 'select' && e.props.value === '').props.onChange({ target: { value: 'study' } });
+  find(e => e.type === 'select' && e.props.value === 'Upcoming').props.onChange({ target: { value: 'Tomorrow' } });
+  elements(render(props), e => e.type === 'input')[1].props.onChange({ target: { checked: true } });
+  find(e => e.type === 'form').props.onSubmit({ preventDefault() {} });
+  assert.deepEqual(applied[1], { category: 'study', date: 'Tomorrow', available: '1', campus: '0' });
+});
+test('discovery keeps unfinished search out of filter navigation and clears applied filters', () => {
+  const navigations = [], filters = discovery.parseDiscoveryFilters({ q: 'applied', page: '2', available: '1' }).filters;
+  const render = componentHarness('../src/components/discovery/discover-screen.tsx', {
+    'next/navigation': { useRouter: () => ({ push: url => navigations.push(url) }) },
+    'next/link': { default: 'a' }, 'next/image': { default: 'img' }, '@/components/activities/activity-card': { ActivityCard: 'article' },
+    '@/components/ui/input': { Input: 'input' }, '@/components/ui/button': { Button: 'button' },
+    './category-chips': { CategoryChips: 'categories' }, './discovery-filters': { DiscoveryFilterControl: 'filters' },
+    '@/lib/utils': { cn: (...args) => args.join(' ') }, '@/lib/activities/discovery': discovery, '@/lib/activities/validation': validation,
+  });
+  const props = { filters, categories: [], activities: [activity], hasNext: true, invalid: false };
+  const find = predicate => elements(render(props), predicate)[0];
+  find(e => e.type === 'input').props.onChange({ target: { value: 'unfinished' } });
+  find(e => e.type === 'categories').props.onChange('sports');
+  assert.equal(navigations.pop(), '/?q=applied&category=sports&available=1');
+  find(e => e.type === 'form').props.onSubmit({ preventDefault() {} });
+  assert.equal(navigations.pop(), '/?q=unfinished&available=1');
+  assert.equal(find(e => e.type === 'a' && e.props.children === 'Next').props.href, '/?q=applied&available=1&page=3');
+  find(e => e.props?.children === 'Clear search and filters').props.onClick();
+  assert.equal(navigations.pop(), '/');
+  assert.equal(find(e => e.type === 'input').props.value, '');
 });
 test('details do not query malformed/demo IDs, return null for inaccessible rows, and respect eligibility', async () => {
   const calls = [], api = dal({ data: null, error: null }, calls);

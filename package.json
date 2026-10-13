@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test tests/*.test.mjs supabase/tests/*.test.mjs",
+    "test:qa": "node --test tests/activity-membership.test.mjs tests/failure-states.test.mjs",
+    "test:db": "node --env-file-if-exists=.env.qa.local --test --test-concurrency=1 tests/integration/membership.test.mjs",
+    "test:e2e": "node --env-file-if-exists=.env.qa.local node_modules/@playwright/test/cli.js test",
+    "demo:seed": "node --env-file-if-exists=.env.demo.local scripts/demo-data.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -23,12 +28,14 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
+    "pg": "^8.23.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

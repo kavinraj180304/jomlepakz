@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/screen";
 import type { AuthState } from "@/lib/auth/validation";
+import { PolicyLinks } from "@/components/policies/policy-links";
 
 type AuthMode = "sign-in" | "sign-up" | "password-reset";
 
@@ -16,10 +17,11 @@ export function AuthForm({ mode, next = "/profile", notice = "" }: { mode: AuthM
   const title = mode === "sign-in" ? "Welcome back" : mode === "sign-up" ? "Find your people at UM" : "Reset your password";
   const errors = state.errors ?? {};
   const message = state.message || notice;
-  return <main id="main-content" className="flex min-h-dvh flex-col justify-center space-y-6 p-6">
-    <Link href="/" className="text-xl font-extrabold tracking-tight">JomLepakz</Link>
+  return <main id="main-content" tabIndex={-1} className="flex min-h-dvh flex-col justify-center space-y-6 p-6">
+    <Link href="/" className="inline-flex min-h-11 items-center self-start text-xl font-extrabold tracking-tight">JomLepakz</Link>
     <div><h1 className="page-title">{title}</h1><p className="helper-text mt-2">{reset ?
       "Enter your email and we'll help you get back into your account." : "Meet students through activities you enjoy."}</p></div>
+    {mode === "sign-up" && <p className="helper-text">Before signing up, read our <Link href="/terms" className="text-primary underline">Terms</Link>, <Link href="/privacy" className="text-primary underline">Privacy notice</Link> and <Link href="/community-guidelines" className="text-primary underline">Community guidelines</Link>. These are drafts requiring review before public launch.</p>}
     <form className="space-y-5" action={action}>
       {!reset && <input type="hidden" name="next" value={next} />}
       {mode === "sign-up" && <Field label="Full Name" htmlFor="auth-name">
@@ -40,7 +42,7 @@ export function AuthForm({ mode, next = "/profile", notice = "" }: { mode: AuthM
           aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "auth-password-error" : undefined} />
         {errors.password && <p id="auth-password-error" className="text-sm text-destructive">{errors.password}</p>}
       </Field>}
-      {mode === "sign-in" && <Link href="/password-reset" className="block text-right text-sm text-primary">Forgot password?</Link>}
+      {mode === "sign-in" && <Link href="/password-reset" className="flex min-h-11 items-center justify-end text-sm text-primary">Forgot password?</Link>}
       {message && <p role="status" className="rounded-lg bg-accent p-3 text-sm">{message}</p>}
       <Button type="submit" size="lg" className="w-full" disabled={pending}>
         {pending ? "Please wait…" : mode === "sign-in" ? "Sign in" : mode === "sign-up" ? "Sign up" : "Send reset link"}
@@ -49,8 +51,9 @@ export function AuthForm({ mode, next = "/profile", notice = "" }: { mode: AuthM
     {!reset && <GoogleButton />}
     <div className="space-y-3 text-center text-sm">{mode === "sign-in" ?
       <p>New to JomLepakz? <Link href="/sign-up" className="font-semibold text-primary">Sign up</Link></p> :
-      <Link href="/sign-in" className="text-primary">Back to sign in</Link>}
-      <Link href="/" className="block text-muted-foreground underline">Explore the demo</Link>
+      <Link href="/sign-in" className="inline-flex min-h-11 items-center text-primary">Back to sign in</Link>}
+      <Link href="/" className="flex min-h-11 items-center justify-center text-muted-foreground underline">Explore the demo</Link>
     </div>
+    <PolicyLinks />
   </main>;
 }

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
-export function ScreenHeader({ title, back, action }: { title: string; back?: string; action?: ReactNode }) {
-  return <header className="flex min-h-16 items-center gap-3 border-b border-secondary px-4 py-3">{back && <Link href={back} aria-label="Back" className="flex size-11 shrink-0 items-center justify-center rounded-full text-secondary-foreground focus-visible:outline-2 focus-visible:outline-ring"><ArrowLeft className="size-5" /></Link>}<h1 className="min-w-0 flex-1 text-xl font-bold leading-tight">{title}</h1>{action}</header>;
+export function ScreenHeader({ title, back, action, titleRef }: { title: string; back?: string; action?: ReactNode; titleRef?: Ref<HTMLHeadingElement> }) {
+  return <header className="flex min-h-16 items-center gap-3 border-b border-secondary px-4 py-3">{back && <Link href={back} aria-label="Back" className="flex size-11 shrink-0 items-center justify-center rounded-full text-secondary-foreground focus-visible:outline-2 focus-visible:outline-ring"><ArrowLeft className="size-5" /></Link>}<h1 ref={titleRef} tabIndex={titleRef ? -1 : undefined} className="min-w-0 flex-1 text-xl font-bold leading-tight">{title}</h1>{action}</header>;
 }
 export function DemoBanner({ children }: { children?: ReactNode }) {
   return <p className="rounded-lg bg-accent px-3 py-2 text-xs leading-relaxed text-secondary-foreground">{children ?? "Static demo only. Changes are previews in this tab and are not saved."}</p>;

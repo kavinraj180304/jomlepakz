@@ -3,6 +3,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { currentIdentity, isEligible } from "@/lib/auth/server";
 import { activityInput, cancelActivitySchema, saveActivitySchema } from "@/lib/activities/validation";
+import { recordProductEvent } from "@/lib/analytics/server";
 
 export type ActivityResult = { ok: true; id: string } | { ok: false; message: string };
 function friendlyError(code?: string) {
@@ -17,6 +18,7 @@ function refreshActivity(id: string) {
   revalidatePath(`/activities/${id}`);
   revalidatePath(`/activities/${id}/edit`);
   revalidatePath("/my-activities");
+  revalidatePath("/notifications");
 }
 export async function saveActivity(input: unknown): Promise<ActivityResult> {
   const parsed = saveActivitySchema.safeParse(input);
@@ -30,6 +32,7 @@ export async function saveActivity(input: unknown): Promise<ActivityResult> {
     });
     if (error || !z.uuid().safeParse(data).success) return { ok: false, message: friendlyError(error?.code) };
     refreshActivity(data);
+    if (!parsed.data.activityId) await recordProductEvent("activity_created");
     return { ok: true, id: data };
   } catch { return { ok: false, message: friendlyError() }; }
 }

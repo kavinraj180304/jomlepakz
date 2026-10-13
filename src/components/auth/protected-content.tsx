@@ -2,7 +2,7 @@ import { Suspense, type ReactNode } from "react";
 import { requireEligibleUser } from "@/lib/auth/server";
 
 async function VerifiedContent({ children, admin }: { children: ReactNode; admin: boolean }) {
-  await requireEligibleUser("/profile", admin);
+  await requireEligibleUser(admin ? "/admin" : "/profile", admin);
   return children;
 }
 

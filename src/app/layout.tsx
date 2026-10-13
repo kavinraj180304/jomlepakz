@@ -28,7 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <a href="#main-content" className="sr-only focus:not-sr-only focus:p-3 focus:text-primary">Skip to content</a>
-        <Suspense fallback={<main id="main-content" className="mx-auto w-full max-w-lg"><LoadingState /></main>}><AppChrome>{children}</AppChrome></Suspense>
+        <Suspense fallback={<main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-lg"><LoadingState /></main>}><AppChrome>{children}</AppChrome></Suspense>
       </body>
     </html>
   );

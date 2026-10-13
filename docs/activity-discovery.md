@@ -42,6 +42,39 @@ page numbers are bounded 1–500. Next/Previous preserve filters, filter changes
 page 1, and malformed/repeated parameters reset with a friendly notice. Concurrent
 creation/editing can shift offset pages; this is not a frozen browsing snapshot.
 
+### Search/filter query design
+
+The existing authenticated RPC performs case-insensitive literal substring matching
+with `strpos(lower(title || ' ' || description || ' ' || location_text || ' ' || category_name), lower(p_search))`.
+Percent, underscore, quotes and SQL-looking text are literal search text. No external
+search service is used. Category is a slug equality, availability is
+`capacity > 1 + count(joined participants)`, and all predicates apply **before**
+the 21-row pagination limit. Existing visibility, host eligibility and block checks
+continue to apply to every search.
+
+URL parameters: `q` (trimmed, at most 120 characters, no internal control characters),
+`category` (empty or lowercase slug, at most 50 characters), `date` (Upcoming/Today/Tomorrow/Weekend),
+`available` and `campus` (`0`/`1`), `page` (canonical decimal integer 1–500).
+Repeated or malformed recognized parameters reset the applied filters with a notice;
+unknown parameter names are ignored. A syntactically valid unknown category returns
+no matches. The DAL validates again before sending typed RPC parameters.
+Defaults are omitted from generated URLs. Refresh, sharing and Back/Forward read
+the applied URL state; only submitting search applies its draft text. Category/date
+changes and applying the sheet return to page one and preserve the applied search.
+Clear search and filters navigates to `/` and empties the search input.
+
+The scrollable mobile sheet contains category, date, campus and availability.
+Changes apply together with Show activities; Close/Escape discards them. Reset filters
+resets the sheet's draft; Show activities commits it while preserving the search.
+The main Clear search and filters control clears everything, including search.
+
+No new indexes or migrations are justified for this change: existing
+`activities_feed_idx` supports status/future scheduling, `activities_category_schedule_idx`
+supports category/status/time, and `participants_activity_status_idx` supports joined
+seat counts. A normal B-tree does not accelerate substring search. Add a text-search
+index only after representative query plans show a need; this query spans category
+text from another table, so a simple activity-title index would not cover it.
+
 Loading, empty and friendly retry states retain the existing card/filter UI. Missing
 migration/configuration errors never substitute fixtures. After streaming starts,
 Next.js may return the not-found UI with HTTP 200 and `noindex`; before streaming,
@@ -59,6 +92,9 @@ npm.cmd run build
 Tests exercise actual validators/DAL using isolated caller-client stubs and inspect
 SQL permissions, visibility/privacy, counts, pagination and delimiter balance.
 Static checks do not establish that the SQL executed successfully.
+Component event tests cover draft cancellation, combined application, clear controls
+and unfinished search isolation. Browser focus, responsive layout and actual database
+query plans remain manual checks.
 
 When an existing **local** Supabase stack has all migrations and development seed:
 
@@ -75,6 +111,28 @@ roles, not service-role credentials. Do not run fixtures on Production. CLI/Dock
 are unavailable here, so database integration checks were not run.
 
 ## Exact manual Development test
+
+Search/filter regression cases (use the verified Development project):
+
+- Search title, description, location and category text with mixed case. Try `%`,
+  `_`, quotes and an unmatched term; punctuation is literal and empty results clear correctly.
+- Combine category, Tomorrow/Weekend and Spots available. At MYT midnight, Tomorrow
+  includes the next calendar day; Weekend includes Saturday/Sunday within seven days.
+  A full activity disappears with availability enabled; pending participants consume no seats.
+- With 21+ matching records, Next/Previous retain every filter. Changing a filter
+  from page two returns to page one. Reload, share the URL and use Back/Forward;
+  the input, chips, sheet values and results match the applied URL.
+- Type an unfinished search, then change category: only the previously submitted
+  search remains applied. Submit explicitly to apply the new text.
+- At 375/390px, open the sheet, change all filters and apply together. Change again
+  and Close/Escape: reopening restores the applied values. Check keyboard focus,
+  scrolling, native select usability and no horizontal page overflow.
+- Clear from both populated and empty results: URL becomes `/`, query empties,
+  filters return to defaults and page becomes one. Reset filters in the sheet keeps
+  search and commits only when Show activities is pressed.
+- Open `/?page=1e2`, `/?q=a%00b`, `/?date=invalid`, `/?available=yes`, or
+  `/?category=sports&category=study`: expect the friendly invalid-filter reset.
+  A valid unknown slug shows empty results. `page=500` is valid, `page=501` is not.
 
 1. Verify the Development reference, apply pending reviewed migrations and ensure
    twelve real categories exist using the documented development seed. Use existing

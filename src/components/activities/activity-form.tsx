@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { saveActivity } from "@/app/activities/actions";
@@ -15,6 +15,12 @@ export function ActivityForm({ activity, categories }: { activity?: OwnedActivit
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [step, setStep] = useState(0);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const previousStep = useRef(step);
+  useEffect(() => {
+    if (previousStep.current !== step) titleRef.current?.focus();
+    previousStep.current = step;
+  }, [step]);
   const [notice, setNotice] = useState("");
   const requestId = useRef<string | null>(null);
   const preset = umLocations.find(location => location.label === activity?.location);
@@ -33,10 +39,10 @@ export function ActivityForm({ activity, categories }: { activity?: OwnedActivit
   const occupancy = activity?.occupied ?? 1;
   let location = draft.customLocation;
   try { location = resolveActivityLocation(draft.locationChoice, draft.customLocation); } catch { /* Form validation supplies the message. */ }
-  return <main id="main-content">
-    <ScreenHeader title={step === 2 ? "Preview Activity" : editing ? "Edit Activity" : step === 1 ? "Activity Details" : "Create Activity"} back={activity ? "/activities/" + activity.id : "/my-activities"} />
+  return <main id="main-content" tabIndex={-1}>
+    <ScreenHeader titleRef={titleRef} title={step === 2 ? "Preview Activity" : editing ? "Edit Activity" : step === 1 ? "Activity Details" : "Create Activity"} back={activity ? "/activities/" + activity.id : "/my-activities"} />
     <div className="space-y-6 p-4">
-      <div className="flex items-center gap-3 text-sm font-semibold text-primary"><span>{step + 1} of 3</span><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary" role="progressbar" aria-label="Activity form steps" aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={3}><div className="h-full rounded-full bg-primary transition-all" style={{ width: (step + 1) / 3 * 100 + "%" }} /></div></div>
+      <div className="flex items-center gap-3 text-sm font-semibold text-primary"><span role="status">{step + 1} of 3</span><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary" role="progressbar" aria-label="Activity form steps" aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={3}><div className="h-full rounded-full bg-primary transition-all" style={{ width: (step + 1) / 3 * 100 + "%" }} /></div></div>
       <p className="helper-text">{editing ? "Changes are saved when you finish the preview." : "You will be the host. Review the details before publishing."} Times are in Malaysia time (MYT).</p>
       <form className="space-y-6" onSubmit={event => {
         event.preventDefault();
@@ -47,7 +53,14 @@ export function ActivityForm({ activity, categories }: { activity?: OwnedActivit
         }
         if (step < 2) { setStep(step + 1); setNotice(""); return; }
         const parsed = activityDraftSchema.safeParse(draft);
-        if (!parsed.success) { setNotice(parsed.error.issues[0]?.message ?? "Check your details."); return; }
+        if (!parsed.success) {
+          const issue = parsed.error.issues[0];
+          const field = String(issue?.path[0] ?? "");
+          const labels: Record<string, string> = { title: "Activity title", categorySlug: "Category", date: "Date", time: "Start time", durationMinutes: "Duration", locationChoice: "Location", customLocation: "Custom location", capacity: "Max participants", description: "Description", joinMode: "Approval mode", coverKey: "Activity image" };
+          setNotice(`${labels[field] ?? "Activity details"}: ${issue?.message ?? "Check your details."}`);
+          setStep(["title", "categorySlug", "date", "time", "durationMinutes"].includes(field) ? 0 : 1);
+          return;
+        }
         const key = requestId.current ?? crypto.randomUUID();
         requestId.current = key;
         startTransition(async () => {
@@ -58,7 +71,7 @@ export function ActivityForm({ activity, categories }: { activity?: OwnedActivit
           } catch { setNotice("We couldn’t save this change. Check My Activities before retrying."); }
         });
       }}>
-        <fieldset disabled={pending} className="space-y-6">
+        <fieldset disabled={pending} className="min-w-0 space-y-6">
           {step === 0 && <>
             <Field label="Activity title" htmlFor="activity-title"><input id="activity-title" name="title" required maxLength={100} value={draft.title} onChange={event => update({ title: event.target.value })} className={fieldClass + " h-14"} placeholder="e.g. Badminton Tonight" /></Field>
             <fieldset><legend className="field-label mb-3">Category</legend><div className="flex flex-wrap gap-2">{categories.map(category => <button key={category.slug} type="button" aria-pressed={draft.categorySlug === category.slug} onClick={() => update({ categorySlug: category.slug })} className={cn("rounded-2xl border px-4 py-3 text-sm font-medium", draft.categorySlug === category.slug ? "border-primary bg-primary text-white" : "bg-muted text-secondary-foreground")}>{category.name}</button>)}</div></fieldset>

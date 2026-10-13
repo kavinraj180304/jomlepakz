@@ -54,14 +54,11 @@ export async function requireEligibleUser(next: string = "/profile", admin = fal
   if (!identity) redirect(`/sign-in?next=${encodeURIComponent(safeNextPath(next))}`);
   if (!(await isEligible(identity.client))) redirect("/account-status");
   if (admin) {
-    // No privileged client or metadata shortcut. Until narrow read policies
-    // are approved, this query fails closed and the demo admin stays blocked.
+    // Live caller-only database authority; never profile/JWT metadata.
     let permitted = false;
     try {
-      const { data, error } = await identity.client.from("admin_memberships")
-        .select("user_id, profiles!admin_memberships_user_id_fkey!inner(auth_user_id)")
-        .eq("profiles.auth_user_id", identity.userId).eq("status", "active").limit(1);
-      permitted = !error && Boolean(data?.length);
+      const { data, error } = await identity.client.rpc("jomlepakz_current_user_is_admin");
+      permitted = !error && data === true;
     } catch { /* Fail closed without revealing database errors. */ }
     if (!permitted) redirect("/account-status");
   }

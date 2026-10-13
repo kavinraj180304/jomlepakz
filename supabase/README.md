@@ -1,5 +1,10 @@
 # Initial V1 schema
 
+For explicit local fictional activity fixtures, see
+[development demo data](../docs/demo-data-analytics.md). The guarded manual
+`npm.cmd run demo:seed` command is separate from migrations/reference category
+seeding, rejects hosted/production targets and creates no accounts/profiles.
+
 `migrations/20261010094238_initial_v1_schema.sql` implements the base structures in
 [the approved database design](../docs/database.md). It requires Supabase's Auth
 schema and roles, on PostgreSQL 15 or later. It creates twelve tables, three
