@@ -9,7 +9,7 @@ import { policyLinks } from "@/lib/policies/content";
 
 export function AppChrome({ children }: { children: ReactNode }) {
   const path = usePathname();
-  const auth = ["/sign-in", "/sign-up", "/password-reset", "/update-password", "/account-status"].includes(path);
+  const auth = ["/sign-in", "/sign-up", "/password-reset", "/update-password", "/account-status", "/onboarding"].includes(path);
   const chat = path.startsWith("/messages/");
   const admin = path.startsWith("/admin");
   const policy = policyLinks.some(link => link.href === path);

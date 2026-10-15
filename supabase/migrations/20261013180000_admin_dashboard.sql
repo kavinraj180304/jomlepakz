@@ -210,7 +210,7 @@ GRANT CREATE ON SCHEMA public TO jomlepakz_admin_api;
 ALTER FUNCTION public.jomlepakz_admin_dashboard(text, integer) OWNER TO jomlepakz_admin_api;
 ALTER FUNCTION public.jomlepakz_admin_action(text, uuid, bigint, text, text) OWNER TO jomlepakz_admin_api;
 REVOKE CREATE ON SCHEMA public FROM jomlepakz_admin_api;
-REVOKE jomlepakz_admin_api FROM postgres;
 REVOKE ALL ON FUNCTION public.jomlepakz_admin_dashboard(text, integer), public.jomlepakz_admin_action(text, uuid, bigint, text, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.jomlepakz_admin_dashboard(text, integer), public.jomlepakz_admin_action(text, uuid, bigint, text, text) TO authenticated;
+REVOKE jomlepakz_admin_api FROM postgres;
 COMMIT;

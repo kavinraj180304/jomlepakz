@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { isProtectedPath, safeNextPath } from "@/lib/auth/navigation";
+import { isProtectedPath, isOnboardingPath, safeNextPath } from "@/lib/auth/navigation";
+import { readAccountAccess, accessDestination } from "@/lib/auth/access";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -36,16 +37,19 @@ export async function updateSession(request: NextRequest) {
   let destination: string | null = null;
   try {
     const { data, error } = await supabase.auth.getClaims();
-    if (isProtectedPath(request.nextUrl.pathname)) {
+    if (isProtectedPath(request.nextUrl.pathname) || isOnboardingPath(request.nextUrl.pathname)) {
       if (error || !data?.claims.sub) {
-        destination = `/sign-in?next=${encodeURIComponent(safeNextPath(request.nextUrl.pathname + request.nextUrl.search))}`;
+        destination = error && error.name !== "AuthSessionMissingError" ? "/account-status" :
+          `/sign-in?next=${encodeURIComponent(safeNextPath(request.nextUrl.pathname + request.nextUrl.search))}`;
       } else {
-        const eligibility = await supabase.rpc("jomlepakz_current_user_is_eligible");
-        if (eligibility.error || eligibility.data !== true) destination = "/account-status";
+        const access = await readAccountAccess(supabase);
+        if (isOnboardingPath(request.nextUrl.pathname)) {
+          if (access.state !== "needs_onboarding") destination = accessDestination(access);
+        } else if (access.state !== "eligible") destination = accessDestination(access);
       }
     }
   } catch {
-    if (isProtectedPath(request.nextUrl.pathname)) destination = "/sign-in?notice=unavailable";
+    if (isProtectedPath(request.nextUrl.pathname) || isOnboardingPath(request.nextUrl.pathname)) destination = "/account-status";
   }
 
   if (destination) {
@@ -58,7 +62,7 @@ export async function updateSession(request: NextRequest) {
     response.headers.set("Cache-Control", "private, no-store");
     return response;
   }
-  if (isProtectedPath(request.nextUrl.pathname) || request.nextUrl.pathname.startsWith("/auth/") ||
+  if (isProtectedPath(request.nextUrl.pathname) || isOnboardingPath(request.nextUrl.pathname) || request.nextUrl.pathname.startsWith("/auth/") ||
     request.nextUrl.pathname === "/account-status" || request.nextUrl.pathname === "/update-password") {
     supabaseResponse.headers.set("Cache-Control", "private, no-store");
   }

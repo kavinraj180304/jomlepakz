@@ -82,10 +82,10 @@ ALTER FUNCTION public.jomlepakz_set_activity_saved(uuid, boolean) OWNER TO jomle
 ALTER FUNCTION public.jomlepakz_activity_saved(uuid) OWNER TO jomlepakz_bookmark_api;
 ALTER FUNCTION public.jomlepakz_saved_activities(integer) OWNER TO jomlepakz_bookmark_api;
 REVOKE CREATE ON SCHEMA public FROM jomlepakz_bookmark_api;
-REVOKE jomlepakz_bookmark_api FROM postgres;
 REVOKE ALL ON FUNCTION public.jomlepakz_set_activity_saved(uuid, boolean),
   public.jomlepakz_activity_saved(uuid), public.jomlepakz_saved_activities(integer)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.jomlepakz_set_activity_saved(uuid, boolean),
   public.jomlepakz_activity_saved(uuid), public.jomlepakz_saved_activities(integer) TO authenticated;
+REVOKE jomlepakz_bookmark_api FROM postgres;
 COMMIT;

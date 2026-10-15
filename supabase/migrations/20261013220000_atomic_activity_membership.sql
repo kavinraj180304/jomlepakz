@@ -125,7 +125,7 @@ ALTER FUNCTION public.jomlepakz_activity_membership(uuid) OWNER TO jomlepakz_mem
 ALTER FUNCTION public.jomlepakz_join_activity(uuid) OWNER TO jomlepakz_membership_api;
 ALTER FUNCTION public.jomlepakz_leave_activity(uuid) OWNER TO jomlepakz_membership_api;
 REVOKE CREATE ON SCHEMA public FROM jomlepakz_membership_api;
-REVOKE jomlepakz_membership_api FROM postgres;
 REVOKE ALL ON FUNCTION public.jomlepakz_activity_membership(uuid), public.jomlepakz_join_activity(uuid), public.jomlepakz_leave_activity(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.jomlepakz_activity_membership(uuid), public.jomlepakz_join_activity(uuid), public.jomlepakz_leave_activity(uuid) TO authenticated;
+REVOKE jomlepakz_membership_api FROM postgres;
 COMMIT;

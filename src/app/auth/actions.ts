@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { appOrigin, isEligible, hasApprovedIdentity } from "@/lib/auth/server";
+import { appOrigin, hasApprovedIdentity } from "@/lib/auth/server";
+import { authenticatedAccess, accessDestination } from "@/lib/auth/access";
 import { friendlyAuthError, safeNextPath, safeOAuthUrl } from "@/lib/auth/navigation";
 import { signInSchema, signUpSchema, resetRequestSchema, updatePasswordSchema, validationErrors, type AuthState } from "@/lib/auth/validation";
 
@@ -36,7 +37,9 @@ export async function signIn(_previous: AuthState, form: FormData): Promise<Auth
     const client = await createClient();
     const { error } = await client.auth.signInWithPassword(result.data);
     if (error) return { message: friendlyAuthError(error.code, "sign-in") };
-    if (await isEligible(client)) destination = safeNextPath(form.get("next"));
+    const { access } = await authenticatedAccess(client);
+    if (access.state === "unavailable") return { message: "Account access is temporarily unavailable. Please try again." };
+    destination = accessDestination(access, safeNextPath(form.get("next")));
   } catch {
     return { message: "Sign in is temporarily unavailable. Please try again shortly." };
   }

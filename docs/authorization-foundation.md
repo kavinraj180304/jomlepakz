@@ -14,7 +14,9 @@ policy additionally vetoes accidental broad permissive policies. Existing
 internal Auth-role permissions remain intact. A future reviewed feature migration
 must deliberately amend that veto, add appropriate grants/operations and test
 ownership, field restrictions and current eligibility. Simply adding an allow
-policy will not work. Onboarding/profile implementation is still pending.
+policy will not work. Migration `20261015120000_trusted_profile_onboarding.sql`
+adds a narrow internal onboarding role and self-only RPCs; direct client profile
+writes and the foundation veto remain denied. General profile editing remains a demo.
 
 The two approved public RPCs remain authenticated-only, no-argument boolean
 self-checks. Their privileged readers use current `auth.uid()`, live Auth state,

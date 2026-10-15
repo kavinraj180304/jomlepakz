@@ -60,10 +60,10 @@ GRANT jomlepakz_auth_gate TO postgres;
 GRANT CREATE ON SCHEMA private TO jomlepakz_auth_gate;
 ALTER FUNCTION private.record_unlinked_auth_identity() OWNER TO jomlepakz_auth_gate;
 REVOKE CREATE ON SCHEMA private FROM jomlepakz_auth_gate;
-REVOKE jomlepakz_auth_gate FROM postgres;
 REVOKE ALL ON FUNCTION private.record_unlinked_auth_identity() FROM PUBLIC, anon, authenticated;
 CREATE TRIGGER profiles_revoke_unlinked_identity BEFORE UPDATE OF auth_user_id
   ON public.profiles FOR EACH ROW EXECUTE FUNCTION private.record_unlinked_auth_identity();
+REVOKE jomlepakz_auth_gate FROM postgres;
 
 -- Replace bodies in this NEW migration; never edit previously applied files.
 CREATE OR REPLACE FUNCTION private.current_user_is_eligible()

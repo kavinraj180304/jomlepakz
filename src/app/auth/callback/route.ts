@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { appOrigin, isEligible, hasApprovedIdentity } from "@/lib/auth/server";
+import { appOrigin } from "@/lib/auth/server";
+import { authenticatedAccess, accessDestination } from "@/lib/auth/access";
 import { callbackSchema } from "@/lib/auth/validation";
 
 // Supports the default Supabase PKCE confirmation link. The configured
@@ -17,12 +18,7 @@ export async function GET(request: NextRequest) {
       const client = await createClient();
       const { error } = await client.auth.exchangeCodeForSession(result.data.code);
       if (!error) {
-        if (await hasApprovedIdentity(client)) {
-          path = await isEligible(client) ? "/profile" : "/account-status";
-        } else {
-          await client.auth.signOut({ scope: "local" });
-          path = "/sign-in?notice=account_denied";
-        }
+        path = accessDestination((await authenticatedAccess(client)).access);
       }
     } catch { /* Do not reflect provider errors, codes or tokens. */ }
   }

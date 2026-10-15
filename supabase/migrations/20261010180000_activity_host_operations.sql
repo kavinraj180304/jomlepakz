@@ -245,7 +245,6 @@ ALTER FUNCTION public.jomlepakz_my_activities(uuid) OWNER TO jomlepakz_activity_
 ALTER FUNCTION public.jomlepakz_save_activity(jsonb, uuid, bigint, uuid) OWNER TO jomlepakz_activity_api;
 ALTER FUNCTION public.jomlepakz_cancel_activity(uuid, bigint) OWNER TO jomlepakz_activity_api;
 REVOKE CREATE ON SCHEMA public, private FROM jomlepakz_activity_api;
-REVOKE jomlepakz_activity_api FROM postgres;
 REVOKE ALL ON FUNCTION private.activity_actor(), private.owned_activity_payload(uuid),
   public.jomlepakz_activity_categories(), public.jomlepakz_my_activities(uuid),
   public.jomlepakz_save_activity(jsonb, uuid, bigint, uuid),
@@ -253,4 +252,5 @@ REVOKE ALL ON FUNCTION private.activity_actor(), private.owned_activity_payload(
 GRANT EXECUTE ON FUNCTION public.jomlepakz_activity_categories(), public.jomlepakz_my_activities(uuid),
   public.jomlepakz_save_activity(jsonb, uuid, bigint, uuid),
   public.jomlepakz_cancel_activity(uuid, bigint) TO authenticated;
+REVOKE jomlepakz_activity_api FROM postgres;
 COMMIT;

@@ -130,10 +130,10 @@ ALTER FUNCTION private.discovery_payload(uuid) OWNER TO jomlepakz_discovery_api;
 ALTER FUNCTION public.jomlepakz_discover_activities(text, text, text, boolean, boolean, integer) OWNER TO jomlepakz_discovery_api;
 ALTER FUNCTION public.jomlepakz_activity_details(uuid) OWNER TO jomlepakz_discovery_api;
 REVOKE CREATE ON SCHEMA public, private FROM jomlepakz_discovery_api;
-REVOKE jomlepakz_discovery_api FROM postgres;
 REVOKE ALL ON FUNCTION private.discovery_payload(uuid),
   public.jomlepakz_discover_activities(text, text, text, boolean, boolean, integer),
   public.jomlepakz_activity_details(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.jomlepakz_discover_activities(text, text, text, boolean, boolean, integer),
   public.jomlepakz_activity_details(uuid) TO authenticated;
+REVOKE jomlepakz_discovery_api FROM postgres;
 COMMIT;

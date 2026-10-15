@@ -5,6 +5,9 @@ export function isProtectedPath(path: string) {
   return path === "/" || protectedRoots.some(root => path === root || path.startsWith(`${root}/`));
 }
 
+// Authenticated onboarding is deliberately separate from fully eligible routes.
+export function isOnboardingPath(path: string) { return path === "/onboarding"; }
+
 // Redirects are restricted to known internal destinations. Never trust a form
 // field, query string, Host header, or provider error as a redirect destination.
 export function safeNextPath(value: unknown, fallback = "/profile") {

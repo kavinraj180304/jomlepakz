@@ -19,6 +19,7 @@ const input = { action: 'hide_activity', targetId: id, revision: '1', reason: 'S
 function auth(admin) {
   return load('../src/lib/auth/server.ts', {
     'server-only': {}, './navigation': { safeNextPath: value => value },
+    './access': { authenticatedAccess: async () => ({ access: { state: 'eligible' }, user: { id } }), accessDestination: () => '/account-status' },
     'next/navigation': { redirect: path => { throw new Error(`redirect:${path}`); } },
     '@/lib/supabase/server': { createClient: async () => ({ auth: { getClaims: async () => ({ data: { claims: { sub: id } } }) },
       rpc: async name => ({ data: name === 'jomlepakz_current_user_is_eligible' ? true : admin }) }) },

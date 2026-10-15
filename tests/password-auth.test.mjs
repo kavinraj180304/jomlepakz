@@ -22,6 +22,8 @@ function load(relativePath, stubs = {}) {
 
 const validation = load('../src/lib/auth/validation.ts');
 const navigation = load('../src/lib/auth/navigation.ts');
+const accountAccess = load('../src/lib/auth/access.ts');
+const accessStub = { ...accountAccess, authenticatedAccess: async () => ({ access: { state: 'restricted' }, user: null }) };
 const serverStub = { appOrigin: () => 'https://app.example.test', isEligible: async () => false,
   hasApprovedIdentity: async () => false };
 
@@ -39,6 +41,7 @@ function actions(client, eligible = false, approved = false) {
     '@/lib/auth/server': { ...serverStub, isEligible: async () => eligible, hasApprovedIdentity: async () => approved },
     '@/lib/auth/navigation': navigation,
     '@/lib/auth/validation': validation,
+    '@/lib/auth/access': { ...accessStub, authenticatedAccess: async () => ({ access: { state: eligible ? 'eligible' : approved ? 'needs_onboarding' : 'restricted' }, user: { id: 'self' } }) },
   });
 }
 
@@ -96,13 +99,14 @@ test('OAuth callback validates identity, denies non-approved accounts, and never
     '@/lib/supabase/server': { createClient: async () => client },
     '@/lib/auth/server': { ...serverStub, hasApprovedIdentity: async () => approved },
     '@/lib/auth/validation': validation,
+    '@/lib/auth/access': { ...accessStub, authenticatedAccess: async () => ({ access: { state: approved ? 'needs_onboarding' : 'restricted' }, user: { id: 'self' } }) },
   });
   const request = { nextUrl: new URL('https://app.example.test/auth/callback?code=pkce-code&next=https://evil.test') };
   const denied = await handler(false).GET(request);
-  assert.equal(denied.headers.get('location'), 'https://app.example.test/sign-in?notice=account_denied');
-  assert.equal(signOutCalls, 1);
+  assert.equal(denied.headers.get('location'), 'https://app.example.test/account-status');
+  assert.equal(signOutCalls, 0);
   const approved = await handler(true).GET(request);
-  assert.equal(approved.headers.get('location'), 'https://app.example.test/account-status');
+  assert.equal(approved.headers.get('location'), 'https://app.example.test/onboarding');
 });
 
 test('OAuth cancellation and missing verifier use friendly errors without provider text', async () => {
@@ -110,7 +114,7 @@ test('OAuth cancellation and missing verifier use friendly errors without provid
   const handler = load('../src/app/auth/callback/route.ts', {
     '@/lib/supabase/server': { createClient: async () => ({ auth: {
       exchangeCodeForSession: async () => { exchanges++; return { error: { message: 'PRIVATE VERIFIER' } }; },
-    } }) }, '@/lib/auth/server': serverStub, '@/lib/auth/validation': validation,
+    } }) }, '@/lib/auth/server': serverStub, '@/lib/auth/validation': validation, '@/lib/auth/access': accessStub,
   });
   for (const query of ['?error=access_denied&error_description=PRIVATE', '?code=missing-verifier']) {
     const response = await handler.GET({ nextUrl: new URL('https://app.example.test/auth/callback' + query) });
@@ -189,7 +193,7 @@ test('password updates require approved live identity and matching server-valida
 
 test('approved-identity reader performs live Auth validation and fails closed on RPC failures', async () => {
   const server = load('../src/lib/auth/server.ts', {
-    'server-only': {}, 'next/navigation': {}, '@/lib/supabase/server': {}, './navigation': navigation,
+    'server-only': {}, 'next/navigation': {}, '@/lib/supabase/server': {}, './navigation': navigation, './access': accessStub,
   });
   let rpcCalls = 0;
   const client = (user, authError = null, error = null) => ({
@@ -280,7 +284,7 @@ test('signout only reports success after local revocation succeeds', async () =>
 
 test('live eligibility errors and non-boolean results fail closed', async () => {
   const server = load('../src/lib/auth/server.ts', {
-    'server-only': {}, 'next/navigation': {}, '@/lib/supabase/server': {}, './navigation': navigation,
+    'server-only': {}, 'next/navigation': {}, '@/lib/supabase/server': {}, './navigation': navigation, './access': accessStub,
   });
   for (const response of [{ data: true, error: { message: 'private' } }, { data: 'true', error: null }, { data: false, error: null }]) {
     assert.equal(await server.isEligible({ rpc: async () => response }), false);
@@ -293,7 +297,7 @@ test('confirmation rejects malformed tokens/types, consumes valid email token, a
   let calls = 0;
   const handler = load('../src/app/auth/confirm/route.ts', {
     '@/lib/supabase/server': { createClient: async () => ({ auth: { verifyOtp: async () => { calls++; return { error: null }; } } }) },
-    '@/lib/auth/server': serverStub, '@/lib/auth/validation': validation,
+    '@/lib/auth/server': serverStub, '@/lib/auth/validation': validation, '@/lib/auth/access': accessStub,
   });
   const request = url => ({ nextUrl: new URL(url) });
   const invalid = await handler.GET(request('https://app.example.test/auth/confirm?token_hash=short&type=recovery'));
@@ -309,7 +313,7 @@ test('confirmation rejects malformed tokens/types, consumes valid email token, a
 test('expired/reused confirmation and missing PKCE code get fixed friendly failure redirects', async () => {
   const stubs = {
     '@/lib/supabase/server': { createClient: async () => ({ auth: { verifyOtp: async () => ({ error: { message: 'PRIVATE TOKEN' } }) } }) },
-    '@/lib/auth/server': serverStub, '@/lib/auth/validation': validation,
+    '@/lib/auth/server': serverStub, '@/lib/auth/validation': validation, '@/lib/auth/access': accessStub,
   };
   const confirmation = load('../src/app/auth/confirm/route.ts', stubs);
   const response = await confirmation.GET({ nextUrl: new URL('https://app.example.test/auth/confirm?token_hash=' + 'b'.repeat(64) + '&type=email') });

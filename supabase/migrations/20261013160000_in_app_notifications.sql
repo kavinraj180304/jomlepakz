@@ -151,8 +151,8 @@ GRANT CREATE ON SCHEMA public TO jomlepakz_notification_api;
 ALTER FUNCTION public.jomlepakz_notifications(integer) OWNER TO jomlepakz_notification_api;
 ALTER FUNCTION public.jomlepakz_mark_all_notifications_read() OWNER TO jomlepakz_notification_api;
 REVOKE CREATE ON SCHEMA public FROM jomlepakz_notification_api;
-REVOKE jomlepakz_notification_api FROM postgres;
 REVOKE ALL ON FUNCTION public.jomlepakz_notifications(integer), public.jomlepakz_mark_all_notifications_read()
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.jomlepakz_notifications(integer), public.jomlepakz_mark_all_notifications_read() TO authenticated;
+REVOKE jomlepakz_notification_api FROM postgres;
 COMMIT;

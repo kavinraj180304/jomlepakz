@@ -144,7 +144,7 @@ ALTER FUNCTION public.jomlepakz_complete_activity(uuid, bigint, text) OWNER TO j
 ALTER FUNCTION public.jomlepakz_activity_feedback_state(uuid) OWNER TO jomlepakz_completion_api;
 ALTER FUNCTION public.jomlepakz_submit_activity_feedback(uuid, text) OWNER TO jomlepakz_completion_api;
 REVOKE CREATE ON SCHEMA public FROM jomlepakz_completion_api;
-REVOKE jomlepakz_completion_api FROM postgres;
 REVOKE ALL ON FUNCTION public.jomlepakz_complete_activity(uuid, bigint, text), public.jomlepakz_activity_feedback_state(uuid), public.jomlepakz_submit_activity_feedback(uuid, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.jomlepakz_complete_activity(uuid, bigint, text), public.jomlepakz_activity_feedback_state(uuid), public.jomlepakz_submit_activity_feedback(uuid, text) TO authenticated;
+REVOKE jomlepakz_completion_api FROM postgres;
 COMMIT;

@@ -2,6 +2,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { safeNextPath } from "./navigation";
+import { authenticatedAccess, accessDestination } from "./access";
 
 export function appOrigin() {
   // Configuration, never an incoming Host/X-Forwarded-Host header.
@@ -50,9 +51,11 @@ export async function hasApprovedIdentity(client: Awaited<ReturnType<typeof crea
 // Call at the data/operation boundary too. This does not replace RLS or the
 // ownership, membership, blocking and field restrictions of each operation.
 export async function requireEligibleUser(next: string = "/profile", admin = false) {
-  const identity = await currentIdentity();
-  if (!identity) redirect(`/sign-in?next=${encodeURIComponent(safeNextPath(next))}`);
-  if (!(await isEligible(identity.client))) redirect("/account-status");
+  const client = await createClient();
+  const { access, user } = await authenticatedAccess(client);
+  if (access.state === "signed_out") redirect(`/sign-in?next=${encodeURIComponent(safeNextPath(next))}`);
+  if (access.state !== "eligible" || !user) redirect(accessDestination(access));
+  const identity = { client, userId: user.id };
   if (admin) {
     // Live caller-only database authority; never profile/JWT metadata.
     let permitted = false;

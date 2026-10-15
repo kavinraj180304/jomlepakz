@@ -1,21 +1,27 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { currentIdentity, isEligible } from "@/lib/auth/server";
+import { createClient } from "@/lib/supabase/server";
+import { authenticatedAccess } from "@/lib/auth/access";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
 async function AccountStatus() {
-  const identity = await currentIdentity();
-  if (!identity) redirect("/sign-in");
-  const eligible = await isEligible(identity.client);
+  let access;
+  try { access = (await authenticatedAccess(await createClient())).access; }
+  catch { access = { state: "unavailable" } as const; }
+  if (access.state === "signed_out") redirect("/sign-in");
+  if (access.state === "eligible") redirect("/");
+  if (access.state === "needs_onboarding") redirect("/onboarding");
+  const unavailable = access.state === "unavailable";
   return <main id="main-content" tabIndex={-1} className="flex min-h-dvh flex-col justify-center space-y-6 p-6">
     <Link href="/" className="text-xl font-extrabold tracking-tight">JomLepakz</Link>
-    <h1 className="page-title">{eligible ? "You're signed in" : "Account access pending"}</h1>
-    <p className="helper-text">{eligible ? "Your account is eligible for app access." :
-      "You're signed in, but protected app access isn't available yet. Your email, profile verification or account access may need review. Confirmation alone does not complete profile onboarding."}</p>
-    {eligible && <Link href="/profile" className="font-semibold text-primary">Continue to your profile</Link>}
+    <h1 className="page-title">{unavailable ? "Account access unavailable" : "Account access restricted"}</h1>
+    <p role={unavailable ? "alert" : undefined} className="helper-text">{unavailable ?
+      "We could not check your account access. Please try again shortly." :
+      "Your email confirmation, approved email domain or account status does not currently permit app access. Contact the team if you need help."}</p>
+    {unavailable && <a href="/account-status" className="inline-flex min-h-11 items-center font-semibold text-primary">Try again</a>}
     <SignOutButton />
-    <Link href="/" className="text-sm text-muted-foreground underline">Explore the demo</Link>
+    <Link href="/sign-in" className="text-sm text-muted-foreground underline">Back to sign in</Link>
   </main>;
 }
 

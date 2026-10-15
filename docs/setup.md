@@ -46,7 +46,7 @@ Copy `.env.example` to `.env.local` if `.env.local` does not already exist. Manu
 
 Keep real values only in Git-ignored `.env.local`. Use the publishable key for both clients; never use a secret or service-role key. Next.js sets `NODE_ENV` automatically. Restart `npm run dev` after populating the values. The Proxy needs the Supabase URL/key when serving requests; lint/build can run without them because client construction happens at request time.
 
-The browser client is `src/lib/supabase/client.ts`; the request-scoped server client is `src/lib/supabase/server.ts`. Await the server factory and use it outside cached functions; with Cache Components enabled, cookie-dependent Server Components need a Suspense boundary. Password signup/signin/signout, Google PKCE sign-in, confirmation/recovery handlers, password updates and protected page layouts are implemented. Migrations are authored under `supabase/migrations/`; this does not establish that they have been applied. Trusted profile onboarding and application persistence remain pending.
+The browser client is `src/lib/supabase/client.ts`; the request-scoped server client is `src/lib/supabase/server.ts`. Await the server factory and use it outside cached functions; with Cache Components enabled, cookie-dependent Server Components need a Suspense boundary. Password signup/signin/signout, Google PKCE sign-in, confirmation/recovery handlers, password updates, trusted profile onboarding and protected page layouts are implemented. Migrations are authored under `supabase/migrations/`; check actual remote history separately.
 
 ### Exact development connection test
 
@@ -103,8 +103,9 @@ authoring this gate, and no Dashboard settings or secrets were entered.
    There is no grandfathering: current email must be confirmed and approved,
    and the linked profile must be active and verified. Do not reactivate
    suspended users, assign administrators, or delete ineligible accounts.
-   Missing/pending profiles remain denied until a separately reviewed trusted
-   onboarding operation exists. Keep operator Dashboard recovery access.
+   Approved confirmed users with missing/pending profiles complete `/onboarding`
+   through the trusted RPC after migration `20261015120000` is applied. Other
+   accounts remain denied. Keep operator Dashboard recovery access.
 3. In **Authentication -> Hooks**, choose **Before User Created**, select a
    Postgres function and set **schema `private`, function `before_user_created`**.
    Save/enable it. Confirm it appears enabled. Supabase currently documents this
@@ -277,7 +278,8 @@ checks the current approved identity before showing or submitting an update.
    the SSR session through `verifyOtp`. The default `ConfirmationURL` template
    is also supported through `/auth/callback` and `exchangeCodeForSession`, but
    that PKCE flow needs the original browser's verifier cookie. Callback success
-   goes to `/profile` if eligible, otherwise `/account-status`; URL-provided
+   goes to `/` if eligible, `/onboarding` for approved pending/missing profiles,
+   or `/account-status` for restrictions/unavailable checks; URL-provided
    `next`/provider error text is never reflected by these handlers.
 
 ### Exact manual test
@@ -292,8 +294,9 @@ checks the current approved identity before showing or submitting an update.
 3. Before confirmation, try `/sign-in`. Expect the friendly confirmation/error
    notice and no protected access. Open the received confirmation link. With
    the recommended template, `/auth/confirm` establishes the session and sends
-   a newly registered account to **Account access pending**. Use its Sign out
-   button, then sign in with the confirmed credentials and expect the same status.
+   a newly registered approved account to `/onboarding`. Complete Full Name,
+   Faculty and Programme; successful onboarding enters the app. Signing in with
+   an existing confirmed approved Auth user without a profile follows the same flow.
 4. Repeat the confirmation link, and try `/auth/confirm` without a token or with
    a malformed token/type. Expect `/sign-in?notice=confirmation_failed`, with no
    raw provider error or token displayed. If the link expired, a trusted operator
@@ -311,7 +314,7 @@ checks the current approved identity before showing or submitting an update.
    or client-written status/verification fields are needed or allowed.
 7. From `/settings`, select Sign out. Expect `/sign-in?notice=signed_out`.
    Reload/revisit `/profile` or `/settings`; expect sign-in again. For pending
-   accounts the same button is available on `/account-status`. Sign out affects
+   accounts the same button is available on `/onboarding`. Sign out affects
    this browser's session; already extracted stateless access tokens can remain
    valid until expiry. It does not mean every other device is signed out.
 8. Sign in with an existing ineligible/suspended Development account. Protected
@@ -323,12 +326,33 @@ checks the current approved identity before showing or submitting an update.
    and encoded slashes/backslashes. Successful eligible sign-in stays on a known
    internal route; it never redirects off-site. Callback URLs ignore `next`.
 
-Profile onboarding and data-access policies are deliberately still pending:
-authentication can be tested fully, but a fresh account cannot become eligible
-or load protected database data merely by confirming an email. Protected screens
-still show fictional content once authorized. The DAL helper
-`requireEligibleUser()` must also be called by future data operations, alongside
-RLS and each operation's ownership/privacy checks. No service-role key is used.
+For the approved MVP, confirmed email on an active approved UM domain plus a
+completed basic profile is the verification mechanism. The trusted onboarding
+RPC derives the Auth link, activation status and verification time in the
+database. Onboarding does not grant admin membership or clear restrictions.
+General profile viewing/editing remains a labelled demo; onboarding is persisted.
+`requireEligibleUser()` and each operation's database authorization remain required.
+No service-role key is used.
+
+### Trusted onboarding (migration 20261015120000)
+
+`jomlepakz_account_access()` is read-only and self-only. It returns `eligible`,
+`needs_onboarding` (with optional own pending-profile text), or `restricted`.
+Unexpected database states raise errors; the app shows unavailable/retry UI.
+`jomlepakz_complete_onboarding(p_full_name, p_faculty, p_programme)` accepts
+only those three text fields. The database derives the Auth link, status and
+verification timestamp. It locks the shared mutation gate, live Auth/domain
+rows and the caller's profile before writing. Already-eligible retries do not
+rewrite anything. Suspended, banned, deleted, revoked and non-approved identities
+remain denied. The new internal owner role has narrow self-only policies;
+direct client profile reads/writes stay restricted. No additional environment
+variables, provider secrets or Auth redirect entries are needed.
+
+After the new migration is separately reviewed/applied to Development, test:
+signup -> email confirmation -> `/onboarding` -> enter the three fields -> `/`.
+An existing confirmed approved Auth user without a profile signs in and follows
+the same onboarding screen. Eligible sign-ins keep their safe internal destination.
+General profile editing remains a demo and is not the onboarding form.
 
 Run `node --test tests/password-auth.test.mjs` for isolated behavioral tests of
 the actual Zod schemas, Server Actions, error handling, redirects and callback
@@ -430,8 +454,10 @@ anonymous execution is revoked. No migration was applied during implementation.
 1. Run `npm run dev`; open `/sign-in` or `/sign-up`, then **Continue with Google**.
    Choose a real approved UM Google identity you control. Supabase validates
    OAuth, the callback exchanges PKCE and calls live `getUser()`, then the
-   database identity RPC. An eligible profile goes to `/profile`; approved
-   pending/missing profiles go to `/account-status` without activation.
+   database identity RPC. An eligible profile goes to `/`; approved
+   pending/missing profiles go to `/onboarding` without activation until
+   the three required fields are submitted successfully. Restricted identities
+   remain denied; technical failures display an unavailable/retry state.
 2. Try a **new** non-approved Google account. Creation must be rejected by the
    hook; verify no new Auth user in the Dashboard. Test an existing non-approved
    Google-linked account too: its callback session is rejected/sign-out attempted,

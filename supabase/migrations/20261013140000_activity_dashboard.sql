@@ -53,7 +53,7 @@ GRANT jomlepakz_dashboard_api TO postgres;
 GRANT CREATE ON SCHEMA public TO jomlepakz_dashboard_api;
 ALTER FUNCTION public.jomlepakz_activity_dashboard(text, integer) OWNER TO jomlepakz_dashboard_api;
 REVOKE CREATE ON SCHEMA public FROM jomlepakz_dashboard_api;
-REVOKE jomlepakz_dashboard_api FROM postgres;
 REVOKE ALL ON FUNCTION public.jomlepakz_activity_dashboard(text, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.jomlepakz_activity_dashboard(text, integer) TO authenticated;
+REVOKE jomlepakz_dashboard_api FROM postgres;
 COMMIT;

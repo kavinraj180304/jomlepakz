@@ -1,5 +1,30 @@
 # Accessibility and mobile audit
 
+## Trusted onboarding checks (15 October 2026)
+
+Local code checks: `npm.cmd run lint`, `npm.cmd test`, `npm.cmd run build`.
+The default test suite includes onboarding schema/action/routing/Proxy tests and
+migration source checks. These do not execute PostgreSQL or establish live RLS.
+`supabase/tests/onboarding.test.sql` adds catalog/ACL assertions for an isolated
+local stack after the new migration; it was not executed during implementation.
+
+`tests/integration/onboarding.test.mjs` is opt-in and is outside `npm test`.
+It reuses the existing local QA configuration guard (`QA_TARGET`,
+`QA_DATABASE_URL`, `QA_A_UID`, `QA_B_UID`, `QA_ADMIN_UID`; names only).
+It rejects hosted targets, creates no Auth users, and requires A to be an existing
+reviewed confirmed approved local Auth identity with no profile or revocation.
+Most scenarios roll back, including temporary Auth/domain/status changes.
+The real overlapping-submission test commits one profile then deletes only that
+exact new local profile. Use a disposable local stack without concurrent app use.
+This integration test was not run; do not use it against hosted Development.
+
+After authorized Development migration application, manually verify email signup
+and confirmation -> onboarding -> home, existing Auth user onboarding, approved
+Google onboarding, required fields, repeat submissions and sign-out. Restricted
+accounts must remain denied; service failures must show unavailable/retry UI.
+General profile viewing/editing remains a demo. Authenticated browser, SQL ACL,
+and concurrency checks remain separate from the local code suite below.
+
 Reviewed 13 October 2026. This pass keeps the existing design, layouts and feature
 boundaries. It is a focused audit, not a WCAG conformance certification.
 
@@ -308,7 +333,7 @@ and desktop**, with keyboard, visible focus and slow/offline networking.
 | Password signup/login/logout | Approved UM domain, confirmation, invalid/non-UM identity, generic duplicate/error responses, logout and protected route denial. |
 | Google OAuth | Provider is currently disabled in inspected Development settings; enable only through reviewed configuration. Then test approved/non-approved email, cancelled callback, fixed redirects and session validation. |
 | Password reset | Neutral request response; valid/expired/reused link, matching passwords, reset callback cannot redirect off-site. |
-| Profile | Profile editing/onboarding remains demo/unconnected; confirm honest state and no protected account/admin field writes. |
+| Profile | Onboarding persists only Full Name, Faculty and Programme through its trusted RPC. General profile editing remains a demo. Confirm no client-controlled identity/account/admin writes. |
 | Avatar | Upload remains unavailable; no successful upload claim. When enabled, test path ownership, type/size and cross-user reads/writes. |
 | Create/edit/cancel | A creates; B cannot edit/cancel even by direct RPC; revision conflict, capacity reduction below occupancy, cancellation notification and frozen history. |
 | Discover/detail | Real records, safe missing/hidden/blocked detail, bounded pagination, full/cancelled states and friendly failures. |

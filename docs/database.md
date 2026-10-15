@@ -200,7 +200,7 @@ These are product/security choices, not authorization to implement. Proposed def
 
 | Decision | Proposed V1 default / question to settle |
 | --- | --- |
-| UM verification | Confirm accepted domains, student eligibility proof, verification expiry and trusted approval process. Email confirmation alone must not be assumed to prove UM enrollment. |
+| UM verification | Approved MVP policy: a confirmed email on an active approved exact UM domain plus the three required profile fields permits trusted automatic activation, provided identity/account checks pass. This is an MVP access policy, not an independent certification of enrollment. |
 | Capacity | Confirm host-inclusive 2-50 limit. The form supports it, but fixture initials and older reference counts are not proof of a consistent roster. |
 | Blocking in shared groups | Confirm automatic removal of the blocker (or the other member when blocker is host), blocking against all joined peers, and history filtering. Users need understandable consequences without revealing another person's block. |
 | Privacy | Confirm default `activity_members` visibility, precise minimal identity/roster fields, and whether location is visible to all verified students or members only. Proposed discovery uses location text; don't allow private addresses until settled. |
