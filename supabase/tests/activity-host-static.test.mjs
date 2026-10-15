@@ -3,6 +3,46 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 const source = readFileSync(new URL('../migrations/20261010180000_activity_host_operations.sql', import.meta.url), 'utf8');
 const sql = source.replace(/--[^\r\n]*/g, '');
+const repair = readFileSync(new URL('../migrations/20261015150000_activity_private_identity.sql', import.meta.url), 'utf8').replace(/--[^\r\n]*/g, '');
+
+test('activity caller helper is bounded, private and executable only by its trusted consumer', () => {
+  assert.match(repair.trim(), /^BEGIN;[\s\S]*COMMIT;$/);
+  assert.match(repair, /CREATE FUNCTION private\.activity_caller_uid\(\)\s+RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog\s+AS \$function\$\s+SELECT auth\.uid\(\);\s+\$function\$;/);
+  assert.match(repair, /ALTER FUNCTION private\.activity_caller_uid\(\) OWNER TO postgres;/);
+  assert.match(repair, /REVOKE ALL ON FUNCTION private\.activity_caller_uid\(\) FROM PUBLIC, anon, authenticated;/);
+  assert.deepEqual(repair.match(/GRANT EXECUTE[^;]+;/g), ['GRANT EXECUTE ON FUNCTION private.activity_caller_uid() TO jomlepakz_activity_api;']);
+  assert.doesNotMatch(repair, /GRANT (?:USAGE|SELECT|UPDATE|INSERT|ALL)|BYPASSRLS|CREATE ROLE|public\.activity_caller_uid/);
+});
+
+test('actor replacement changes only caller lookup and preserves restricted invoker authority', () => {
+  const original = sql.match(/CREATE FUNCTION private\.activity_actor\(\)[\s\S]*?\$function\$;/)[0];
+  const updated = repair.match(/CREATE OR REPLACE FUNCTION private\.activity_actor\(\)[\s\S]*?\$function\$;/)[0];
+  assert.equal(updated, original.replace('CREATE FUNCTION', 'CREATE OR REPLACE FUNCTION').replace('auth.uid()', 'private.activity_caller_uid()'));
+  assert.doesNotMatch(updated, /auth\s*\./);
+  assert.doesNotMatch(repair, /ALTER FUNCTION private\.activity_actor|CREATE(?: OR REPLACE)? FUNCTION public\.|discovery|DROP POLICY|CREATE POLICY/);
+  assert.equal([...repair.matchAll(/CREATE OR REPLACE FUNCTION/g)].length, 1);
+  assert.ok(repair.indexOf('GRANT jomlepakz_activity_api TO postgres;') < repair.indexOf(updated));
+  assert.match(repair, /REVOKE jomlepakz_activity_api FROM postgres;\s+COMMIT;\s*$/);
+});
+
+test('exactly four host policies change only their caller expression', () => {
+  for (const name of ['activity_api_profile_self', 'activity_api_owned_read', 'activity_api_owned_insert', 'activity_api_owned_update']) {
+    const original = sql.match(new RegExp(`CREATE POLICY ${name} ON public\\.\\w+[^;]*;`))[0];
+    const updated = repair.match(new RegExp(`ALTER POLICY ${name} ON public\\.\\w+[^;]*;`))[0];
+    const conditions = statement => statement.slice(statement.search(/\b(?:USING|WITH CHECK)\b/)).replace(/\s+/g, ' ').trim();
+    assert.equal(conditions(updated), conditions(original).replaceAll('auth.uid()', 'private.activity_caller_uid()'));
+    assert.doesNotMatch(updated, /auth\s*\./);
+  }
+  assert.equal([...repair.matchAll(/ALTER POLICY/g)].length, 4);
+  assert.equal([...repair.matchAll(/auth\./g)].length, 1, 'only postgres-owned caller helper references Auth');
+});
+
+test('categories keep the existing eligibility path and empty-array result', () => {
+  const categories = sql.match(/CREATE FUNCTION public\.jomlepakz_activity_categories\(\)[\s\S]*?\$function\$;/)[0];
+  assert.match(categories, /PERFORM private\.activity_actor\(\);/);
+  assert.match(categories, /FROM public\.categories WHERE is_active\), '\[\]'::jsonb\)/);
+  assert.doesNotMatch(repair, /jomlepakz_activity_categories|jomlepakz_my_activities|jomlepakz_save_activity|jomlepakz_cancel_activity/);
+});
 
 test('host APIs are atomic, narrowly owned and do not enable raw client access', () => {
   assert.match(sql.trim(), /^BEGIN;[\s\S]*COMMIT;$/);

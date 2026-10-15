@@ -51,6 +51,19 @@ test('pending profile completion works without replacing its identity', async ()
   });
 });
 
+test('onboarding works without restricted-role Auth schema usage or browser helper execution', async () => {
+  await scenario(async c => {
+    // Isolated local transaction only; restores the original ACL on rollback.
+    await c.query('REVOKE USAGE ON SCHEMA auth FROM jomlepakz_onboarding_api');
+    const privileges = await c.query("SELECT has_schema_privilege('jomlepakz_onboarding_api','auth','USAGE') AS usage");
+    assert.equal(privileges.rows[0].usage, false, 'local fixture must reproduce the hosted schema boundary');
+  }, async c => {
+    assert.equal((await rpc(c)).rows[0].result, true);
+    assert.equal((await c.query('SELECT public.jomlepakz_account_access() AS access')).rows[0].access.state, 'eligible');
+    await assert.rejects(c.query('SELECT private.onboarding_caller_uid()'), error => error.code === '42501');
+  });
+});
+
 for (const status of ['suspended', 'banned', 'deleted']) {
   test(`${status} profile cannot be reactivated`, async () => {
     await scenario(c => c.query('INSERT INTO public.profiles(auth_user_id,account_status) VALUES($1,$2)', [uid, status === 'deleted' ? 'pending_verification' : status]).then(async () => {
