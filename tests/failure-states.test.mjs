@@ -23,7 +23,7 @@ const activity = { id, title: 'Activity', description: 'Bring water.', categoryN
   capacity: 4, occupied: 4, upcoming: true, inProgress: false, status: 'scheduled', isHost: false,
   canEdit: false, revision: null, joinMode: 'instant', coverPath: null };
 const feedback = { state: 'not_participant', body: null, canComplete: false, revision: null, requiresReason: false };
-function detail({ record = activity, bookmark = async () => false, state = async () => feedback } = {}) {
+function detail({ record = activity, bookmark = async () => false, state = async () => feedback, requests = async () => [] } = {}) {
   const Page = load('../src/app/activities/[id]/page.tsx', {
     'next/image': { default: 'img' }, 'next/link': { default: 'a' },
     'next/navigation': { notFound: () => { throw new Error('not-found'); } },
@@ -36,8 +36,9 @@ function detail({ record = activity, bookmark = async () => false, state = async
     '@/lib/activities/bookmarks-server': { getActivitySaved: bookmark },
     '@/lib/activities/feedback-server': { getFeedbackState: state },
     '@/components/activities/private-feedback': { PrivateFeedback: 'feedback' },
-    '@/lib/activities/membership-server': { getActivityMembership: async () => ({ activityId: id, status: 'none', availability: 'open', canJoin: true, canLeave: false, requiresApproval: false }) },
+    '@/lib/activities/membership-server': { getPendingJoinRequests: requests, getActivityMembership: async () => ({ activityId: id, status: 'none', availability: 'open', canJoin: true, canLeave: false, requiresApproval: false }) },
     '@/components/activities/participation-control': { ParticipationControl: 'participation' },
+    '@/components/activities/host-join-requests': { HostJoinRequests: 'join-requests' },
     '@/components/analytics/product-view': { ProductView: 'product-view' },
   }).default;
   const shell = Page({ params: Promise.resolve({ id }) });
@@ -86,4 +87,22 @@ test('route boundaries use the refetching retry callback and never render raw er
     elements(view, e => e.type === 'button')[0].props.onClick();
     assert.equal(retries, 1);
   }
+});
+
+test('detail retrieves and renders request data only for the host of an approval activity', async () => {
+  let calls = 0;
+  const requests = async () => { calls++; return [{ name: 'UM applicant' }]; };
+  for (const record of [activity, { ...activity, joinMode: 'approval' }]) {
+    const view = await detail({ record, requests });
+    assert.equal(elements(view, e => e.type === 'join-requests').length, 0);
+  }
+  assert.equal(calls, 0);
+  const host = { ...activity, isHost: true, joinMode: 'approval', revision: '1' };
+  const view = await detail({ record: host, requests });
+  assert.equal(calls, 1);
+  const section = elements(view, e => e.type === 'join-requests')[0];
+  assert.deepEqual(section.props.requests, [{ name: 'UM applicant' }]);
+  assert.equal(section.props.canDecide, true);
+  const closed = await detail({ record: { ...host, upcoming: false }, requests });
+  assert.equal(elements(closed, e => e.type === 'join-requests')[0].props.canDecide, false);
 });

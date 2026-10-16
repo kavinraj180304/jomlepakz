@@ -11,9 +11,10 @@ import { BookmarkButton } from "@/components/activities/bookmark-button";
 import { getActivitySaved } from "@/lib/activities/bookmarks-server";
 import { getFeedbackState } from "@/lib/activities/feedback-server";
 import { PrivateFeedback } from "@/components/activities/private-feedback";
-import { getActivityMembership } from "@/lib/activities/membership-server";
+import { getActivityMembership, getPendingJoinRequests } from "@/lib/activities/membership-server";
 import { ParticipationControl } from "@/components/activities/participation-control";
 import { ProductView } from "@/components/analytics/product-view";
+import { HostJoinRequests } from "@/components/activities/host-join-requests";
 
 export default function ActivityDetails({ params }: { params: Promise<{ id: string }> }) {
   return <main id="main-content" tabIndex={-1} className="space-y-6 px-4 pb-8 pt-5">
@@ -27,6 +28,7 @@ async function ActivityDetailsContent({ params }: { params: Promise<{ id: string
   const activity = await getActivityDetails(id);
   if (!activity) notFound();
   const [saved, feedback, membership] = await Promise.all([getActivitySaved(id), getFeedbackState(id), getActivityMembership(id)]);
+  const requests = activity.isHost && activity.joinMode === "approval" ? await getPendingJoinRequests(id) : [];
   const status = activity.status === "scheduled" ? activity.inProgress ? "Scheduled · In progress" : activity.upcoming ? "Scheduled" : "Scheduled · Ended" : activity.status === "cancelled" ? "Cancelled" : "Completed";
   const spots = Math.max(0, activity.capacity - activity.occupied);
   return <>
@@ -40,6 +42,7 @@ async function ActivityDetailsContent({ params }: { params: Promise<{ id: string
     <BookmarkButton key={`${id}:${saved}`} id={id} saved={saved} />
     <p className="helper-text">Saving does not reserve a spot.</p>
     <ParticipationControl key={`${id}:${membership.status}:${membership.availability}`} value={membership} />
+    {activity.isHost && activity.revision && <HostJoinRequests id={id} revision={activity.revision} requests={requests} canDecide={activity.upcoming} />}
     <PrivateFeedback key={`${id}:${feedback.state}:${feedback.revision}`} id={id} value={feedback} />
     {activity.isHost && activity.status === "scheduled" && activity.revision && <>
       {activity.canEdit && <Link href={`/activities/${id}/edit`} className="inline-flex min-h-11 items-center text-primary underline">Edit activity</Link>}

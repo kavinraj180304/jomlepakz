@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { currentIdentity, isEligible } from "@/lib/auth/server";
-import { membershipInputSchema, membershipResultSchema } from "@/lib/activities/membership";
+import { membershipInputSchema, membershipResultSchema, joinRequestDecisionSchema, joinRequestDecisionResultSchema } from "@/lib/activities/membership";
 import { recordProductEvent } from "@/lib/analytics/server";
 type Result = { ok: true; status: "joined" | "pending" | "left" | "none" } | { ok: false; message: string };
 async function change(input: unknown, operation: "join" | "leave"): Promise<Result> {
@@ -25,3 +25,31 @@ async function change(input: unknown, operation: "join" | "leave"): Promise<Resu
 }
 export async function joinActivity(input: unknown) { return change(input, "join"); }
 export async function leaveActivity(input: unknown) { return change(input, "leave"); }
+
+export async function decideJoinRequest(input: unknown): Promise<{ ok: boolean; message: string }> {
+  const parsed = joinRequestDecisionSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Refresh the join requests before trying again." };
+  const identity = await currentIdentity();
+  if (!identity || !(await isEligible(identity.client))) return { ok: false, message: "Sign in with an eligible UM account to continue." };
+  try {
+    const value = parsed.data;
+    const { data, error } = await identity.client.rpc("jomlepakz_decide_join_request", {
+      p_activity_id: value.activityId, p_applicant_id: value.applicantId, p_requested_at: value.requestedAt,
+      p_revision: value.revision, p_decision: value.decision,
+    });
+    const result = joinRequestDecisionResultSchema.safeParse(data);
+    if (error || !result.success || result.data.activityId !== value.activityId ||
+      (result.data.outcome === "joined" && value.decision !== "approve") ||
+      (result.data.outcome === "declined" && value.decision !== "reject")) {
+      return { ok: false, message: "The decision could not be confirmed. Refresh before retrying." };
+    }
+    for (const path of ["/", `/activities/${value.activityId}`, "/my-activities", "/saved-activities", "/notifications"]) revalidatePath(path);
+    const messages = {
+      joined: "Request approved. The participant now has a seat.", declined: "Request rejected.",
+      full: "This activity is full. The request remains pending.", stale: "The activity or request has changed. Refresh before deciding again.",
+      closed: "Requests cannot be decided after joining closes or the activity becomes unavailable.",
+      unavailable: "This applicant cannot join right now. The request remains pending.",
+    };
+    return { ok: ["joined", "declined"].includes(result.data.outcome), message: messages[result.data.outcome] };
+  } catch { return { ok: false, message: "The decision could not be confirmed. Refresh before retrying." }; }
+}
